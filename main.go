@@ -25,7 +25,7 @@ func main() {
 
 		if roomId == "" {
 			newRoomId := uuid.New().String()
-			room = newRoom([]byte(newRoomId))
+			room = newRoom([]byte(newRoomId), &roomMap)
 			go room.run()
 
 			roomMap[newRoomId] = room

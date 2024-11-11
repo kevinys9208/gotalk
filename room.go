@@ -3,12 +3,15 @@ package main
 import (
 	"log"
 	"slices"
+	"strconv"
 )
 
 type Room struct {
 	clients map[*Client]bool
 
 	roomId []byte
+
+	roomMap *map[string]*Room
 
 	broadcast chan []byte
 
@@ -17,13 +20,14 @@ type Room struct {
 	unregister chan *Client
 }
 
-func newRoom(roomId []byte) *Room {
+func newRoom(roomId []byte, roomMap *map[string]*Room) *Room {
 	return &Room{
 		broadcast:  make(chan []byte, 1),
 		register:   make(chan *Client, 1),
 		unregister: make(chan *Client, 1),
 		clients:    make(map[*Client]bool),
 		roomId:     roomId,
+		roomMap:    roomMap,
 	}
 }
 
@@ -43,6 +47,13 @@ func (h *Room) run() {
 				close(client.send)
 			}
 
+			if len(h.clients) == 0 {
+				delete(roomMap, string(h.roomId))
+				log.Println("The client does not exist, so we are closing the room. [ " + string(h.roomId) + " ]")
+				log.Println("Number of remaining rooms: " + strconv.Itoa(len(roomMap)))
+				return
+			}
+
 		case message := <-h.broadcast:
 			for client := range h.clients {
 				select {
@@ -51,6 +62,13 @@ func (h *Room) run() {
 					close(client.send)
 					delete(h.clients, client)
 				}
+			}
+
+			if len(h.clients) == 0 {
+				delete(roomMap, string(h.roomId))
+				log.Println("The client does not exist, so we are closing the room. [ " + string(h.roomId) + " ]")
+				log.Println("Number of remaining rooms: " + strconv.Itoa(len(roomMap)))
+				return
 			}
 		}
 	}
